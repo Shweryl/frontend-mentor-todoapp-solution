@@ -17,8 +17,8 @@
         </div>
         <div class="list-box">
           <div class="" v-if="todos.length >= 1">
-            <li class="tasks" v-for="(todo,index) in todos" :key="index">
-              <div :class="checkbox ? 'checkbox' : ''" @click="checked">
+            <li class="tasks" v-for="(todo,index) in todos" :key="index" :class="{throughLine : todo.complete}">
+              <div :class="todo.complete ? 'checkbox' : ''" @click="checked(index)">
                 <img src="@/assets/images/icon-check.svg" alt="">
               </div>
               <span class="">{{ todo.todoText }}</span>
@@ -30,15 +30,20 @@
           </div>
           <div class="control-bar">
             <div class="">{{ todoLeft }} items left</div>
-            <div class="">
-              <span @click="showAll" >All</span>
-              <span @click="showActive">Active</span>
-              <span @click="showComplete">Completed</span>
+            <div class="" v-if="!mobileDisplay">
+              <span @click="showAll" :class="currentList == 'all' ? 'active' : ''">All</span>
+              <span @click="showActive" :class="currentList == 'active' ? 'active' : ''">Active</span>
+              <span @click="showComplete" :class="currentList == 'completed' ? 'active' : ''">Completed</span>
             </div>
-            <div class="clear">
+            <div class="clear" @click="removeCompleteItems">
               Clear Completed
             </div>
           </div>
+        </div>
+        <div class="mobile-control" v-if="mobileDisplay">
+              <span @click="showAll" :class="currentList == 'all' ? 'active' : ''">All</span>
+              <span @click="showActive" :class="currentList == 'active' ? 'active' : ''">Active</span>
+              <span @click="showComplete" :class="currentList == 'completed' ? 'active' : ''">Completed</span>
         </div>
       </div>
     </div>
@@ -49,18 +54,23 @@
 export default {
     data(){
       return{
-        checkbox : false,
+        checkbox : null,
         toggleLight : true,
         toggleBtn : 'icon-sun.svg',
         themeClass : 'light',
         todoModal : '',
         todosLeft : 0,
-        todos : []
+        currentList : '',
+        todos : [],
+        todoLists : [],
+        mobileDisplay : null,
       }
     },
     methods : {
-      checked(){
-        this.checkbox = !this.checkbox
+      checked(index){
+        this.todoLists[index].active = !this.todoLists[index].active
+        this.todoLists[index].complete = !this.todoLists[index].complete
+        this.todos = this.todoLists
       },
 
       themeToggle(){
@@ -76,25 +86,62 @@ export default {
 
       addTodos(){
         if(this.todoModal != ''){
-          this.todos.push(
+          this.todoLists.push(
             {
               todoText : this.todoModal,
               active : true,
               complete : false
             }
           )
+          this.todos = this.todoLists
           this.todoModal = ''
         }
       },
 
       removeList(index){
-        this.todos.splice(index,1)
+        this.todoLists.splice(index,1)
+        this.todos = this.todoLists
+      },
+
+      showAll(){
+        this.currentList = 'all'
+        this.todos = this.todoLists
+      },
+      showActive(){
+        this.currentList = 'active'
+        this.todos = this.todoLists.filter((item) => item.active == true)
+      },
+      showComplete(){
+        this.currentList = 'completed'
+        this.todos = this.todoLists.filter((item) => item.complete == true)
+      },
+      removeCompleteItems(){
+        this.todoLists = this.todoLists.filter((item)=> item.complete == false)
+        this.todos = this.todoLists
       }
     },
     computed : {
       todoLeft(){
-        return this.todos.filter((item)=> item.active = true).length
+        return this.todoLists.filter((item)=> item.active == true).length
       }
+    },
+    created(){
+      if(window.innerWidth <= 375){
+        this.mobileDisplay = true
+      }else{
+        this.mobileDisplay = false
+      }
+
+      window.addEventListener('resize',()=>{
+        if(window.innerWidth <= 375){
+          this.mobileDisplay = true
+        }else{
+          this.mobileDisplay = false
+        }
+      })
+    },
+    mounted(){
+      this.showAll()
     }
 
 }
@@ -112,9 +159,15 @@ export default {
     width : 100%;
     height : 40%;
     background-image: url("@/assets/images/bg-desktop-light.jpg");
+    background-repeat: no-repeat;
     position : absolute;
     top : 0;
     left : 0;
+    object-fit: cover;
+
+    @media(max-width: 375px){
+      background-image: url("@/assets/images/bg-mobile-light.jpg");
+    }
     
   }
 
@@ -131,6 +184,10 @@ export default {
       width : 100%;
       max-width : 520px;
       padding : 10px;
+
+      @media(max-width: 375px){
+        padding : 20px;
+      }
 
       .header-theme{
         display: flex;
@@ -265,6 +322,15 @@ export default {
           }
         }
 
+        .throughLine{
+          text-decoration: line-through;
+          color : hsl(236, 9%, 61%);
+
+          span{
+            color : hsl(236, 9%, 61%);
+          }
+        }
+
         .control-bar{
           display : flex;
           justify-content: space-between;
@@ -274,7 +340,7 @@ export default {
           font-weight : 500;
           padding : 15px 20px;
 
-          div span{
+          span{
             margin-right : 15px;
             cursor: pointer;
 
@@ -283,12 +349,53 @@ export default {
             }
           }
 
+          .active{
+            color : hsl(192, 80%, 57%);
+            font-weight : 600;
+
+            &:hover{
+              color : hsl(192, 80%, 57%);
+            }
+          }
+
+
           .clear{
             cursor : pointer;
             
             &:hover{
               color: hsl(236, 9%, 41%);
             }
+          }
+        }
+      }
+
+      .mobile-control{
+        margin-top : 20px;
+        background-color: white;
+        border-radius : 8px;
+        padding : 20px;
+        display: flex;
+        justify-content: center;
+        color : hsl(236, 9%, 61%);
+        font-size: 14px;
+        font-weight : 500;
+        box-shadow : 5px 5px 30px hsl(233, 11%, 84%);
+
+        span{
+            margin-right : 15px;
+            cursor: pointer;
+
+            &:hover{
+              color : hsl(235, 19%, 35%);
+            }
+          }
+
+        .active{
+          color : hsl(192, 80%, 57%);
+          font-weight : 600;
+
+          &:hover{
+            color : hsl(192, 80%, 57%);
           }
         }
       }
@@ -310,6 +417,12 @@ export default {
     position : absolute;
     top : 0;
     left : 0;
+    background-repeat: no-repeat;
+    object-fit: cover;
+    
+    @media(max-width: 375px){
+      background-image: url("@/assets/images/bg-mobile-dark.jpg");
+    }
     
   }
 
@@ -326,6 +439,10 @@ export default {
       width : 100%;
       max-width : 520px;
       padding : 10px;
+
+      @media(max-width: 375px){
+        padding : 20px;
+      }
 
       .header-theme{
         display: flex;
@@ -358,7 +475,7 @@ export default {
           height : 23px;
           background-image: none;
           padding : 5px;
-          border: 1px solid hsl(237, 14%, 26%);
+          border: 1px solid hsl(236, 9%, 50%);
           border-radius: 50%;
           margin-right : 10px;
           user-select: none;
@@ -464,6 +581,15 @@ export default {
           }
         }
 
+        .throughLine{
+          text-decoration: line-through;
+          color : hsl(236, 9%, 61%);
+
+          span{
+            color : hsl(236, 9%, 61%);
+          }
+        }
+
         .control-bar{
           display : flex;
           justify-content: space-between;
@@ -473,12 +599,21 @@ export default {
           font-weight : 500;
           padding : 15px 20px;
 
-          div span{
+          span{
             margin-right : 15px;
             cursor: pointer;
 
             &:hover{
               color : hsl(236, 33%, 92%);
+            }
+          }
+
+          .active{
+            color : hsl(192, 80%, 57%);
+            font-weight : 600;
+
+            &:hover{
+              color : hsl(192, 80%, 57%);
             }
           }
 
@@ -488,6 +623,37 @@ export default {
             &:hover{
               color: hsl(236, 33%, 92%);
             }
+          }
+        }
+      }
+
+      .mobile-control{
+        margin-top : 20px;
+        background-color: hsl(237, 14%, 26%);
+        border-radius : 8px;
+        padding : 20px;
+        display: flex;
+        justify-content: center;
+        color : hsl(234, 39%, 85%);
+        font-size: 14px;
+        font-weight : 500;
+        box-shadow : 5px 5px 30px hsl(237, 14%, 16%);
+
+        span{
+            margin-right : 15px;
+            cursor: pointer;
+
+            &:hover{
+              color : hsl(236, 33%, 92%);
+            }
+          }
+
+        .active{
+          color : hsl(192, 80%, 57%);
+          font-weight : 600;
+
+          &:hover{
+            color : hsl(192, 80%, 57%);
           }
         }
       }
