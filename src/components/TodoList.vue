@@ -17,13 +17,24 @@
         </div>
         <div class="list-box">
           <div class="" v-if="todos.length >= 1">
-            <li class="tasks" v-for="(todo,index) in todos" :key="index" :class="{throughLine : todo.complete}">
+            <draggable v-model="todos" class="list-group" @end="handleDragEnd" @start="handDragStart" item-key="todoText">
+            <!-- <li class="tasks" v-for="(todo,index) in todos" :key="index" :class="{throughLine : todo.complete}" >
               <div :class="todo.complete ? 'checkbox' : ''" @click="checked(index)">
                 <img src="@/assets/images/icon-check.svg" alt="">
               </div>
               <span class="">{{ todo.todoText }}</span>
               <img src="@/assets/images/icon-cross.svg" class="remove-btn" alt="" @click="removeList(index)">
-            </li>
+            </li> -->
+            <template #item="{element : todo}">
+              <li class="tasks"  :class="{throughLine : todo.complete}" >
+                <div :class="todo.complete ? 'checkbox' : ''" @click="checked(todo.id)">
+                  <img src="@/assets/images/icon-check.svg" alt="">
+                </div>
+                <span class="">{{ todo.todoText }}</span>
+                <img src="@/assets/images/icon-cross.svg" class="remove-btn" alt="" @click="removeList(todo.id)">
+              </li>
+            </template>
+          </draggable>
           </div>
           <div class="empty-box" v-else>
             <p class="">No tasks to be done</p>
@@ -45,13 +56,18 @@
               <span @click="showActive" :class="currentList == 'active' ? 'active' : ''">Active</span>
               <span @click="showComplete" :class="currentList == 'completed' ? 'active' : ''">Completed</span>
         </div>
+        <div style="display:flex;justify-content: center;align-items: center;padding:20px;color:hsl(236, 9%, 61%)">
+          <p>Drag and drop to reorder list</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import draggable from 'vuedraggable';
 export default {
+    components : {draggable},
     data(){
       return{
         checkbox : null,
@@ -64,13 +80,28 @@ export default {
         todos : [],
         todoLists : [],
         mobileDisplay : null,
+        id : 0,
       }
     },
     methods : {
-      checked(index){
-        this.todoLists[index].active = !this.todoLists[index].active
-        this.todoLists[index].complete = !this.todoLists[index].complete
+      handDragStart(e){
+        console.log(e)
+      },
+      handleDragEnd(e){
+        console.log(e)
+      },
+      checked(id){
+        //this.todoLists[index].active = !this.todoLists[index].active
+        //this.todoLists[index].complete = !this.todoLists[index].complete
+        console.log(id);
+        this.todoLists.forEach((item) => {
+          if(item.id == id){
+            item.active = !item.active
+            item.complete = !item.complete
+          }
+        })
         this.todos = this.todoLists
+        console.log(this.todoLists)
       },
 
       themeToggle(){
@@ -88,6 +119,7 @@ export default {
         if(this.todoModal != ''){
           this.todoLists.push(
             {
+              id : this.id++,
               todoText : this.todoModal,
               active : true,
               complete : false
@@ -95,11 +127,13 @@ export default {
           )
           this.todos = this.todoLists
           this.todoModal = ''
+          console.log(this.todoLists)
         }
       },
 
-      removeList(index){
-        this.todoLists.splice(index,1)
+      removeList(id){
+        // this.todoLists.splice(index,1)
+        this.todoLists = this.todoLists.filter((todo)=> todo.id != id)
         this.todos = this.todoLists
       },
 
